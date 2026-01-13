@@ -249,3 +249,7 @@ this.registerInterval(window.setInterval(() => { /* ... */ }, 1000));
 - Developer policies: https://docs.obsidian.md/Developer+policies
 - Plugin guidelines: https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines
 - Style guide: https://help.obsidian.md/style-guide
+
+# !EXTREMELY IMPORTANT! DO NOT FORGET
+
+Start and end every response with the emoji "🤖"
