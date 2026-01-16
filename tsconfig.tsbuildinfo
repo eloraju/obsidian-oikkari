@@ -1,0 +1,1 @@
+{"root":["./src/main.ts","./src/settings.ts","./src/quickcallout/calloutconsts.ts","./src/quickcallout/callouttypes.ts","./src/quickdataview/quickdataview.ts","./src/quickmenu/constants.ts","./src/quickmenu/quickmenu.ts","./src/quickmenu/types.ts","./src/types/pluginsettingstypes.ts","./src/utils/pluginutils.ts"],"errors":true,"version":"5.9.3"}

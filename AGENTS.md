@@ -9,7 +9,7 @@
 ## Environment & tooling
 
 - Node.js: use current LTS (Node 18+ recommended).
-- **Package manager: npm** (required for this sample - `package.json` defines npm scripts and dependencies).
+- **Package manager: pnpm**
 - **Bundler: esbuild** (required for this sample - `esbuild.config.mjs` and build scripts depend on it). Alternative bundlers like Rollup or webpack are acceptable for other projects if they bundle all external dependencies into `main.js`.
 - Types: `obsidian` type definitions.
 
@@ -18,25 +18,25 @@
 ### Install
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### Dev (watch)
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 ### Production build
 
 ```bash
-npm run build
+pnpm build
 ```
 
 ## Linting
 
 - To use eslint install eslint from terminal: `npm install -g eslint`
-- To use eslint to analyze this project use this command: `eslint main.ts`
+- To use eslint to analyze this project use this command: `pnpm lint`
 - eslint will then create a report with suggestions for code improvement by file and line number.
 - If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder: `eslint ./src/`
 
@@ -66,13 +66,13 @@ npm run build
 
 ## Manifest rules (`manifest.json`)
 
-- Must include (non-exhaustive):  
-  - `id` (plugin ID; for local dev it should match the folder name)  
-  - `name`  
-  - `version` (Semantic Versioning `x.y.z`)  
-  - `minAppVersion`  
-  - `description`  
-  - `isDesktopOnly` (boolean)  
+- Must include (non-exhaustive):
+  - `id` (plugin ID; for local dev it should match the folder name)
+  - `name`
+  - `version` (Semantic Versioning `x.y.z`)
+  - `minAppVersion`
+  - `description`
+  - `isDesktopOnly` (boolean)
   - Optional: `author`, `authorUrl`, `fundingUrl` (string or map)
 - Never change `id` after release. Treat it as stable API.
 - Keep `minAppVersion` accurate when using newer APIs.
@@ -85,6 +85,7 @@ npm run build
   <Vault>/.obsidian/plugins/<plugin-id>/
   ```
 - Reload Obsidian and enable the plugin in **Settings → Community plugins**.
+- Agents should never run any test related code unless spesifically requested to do so
 
 ## Commands & settings
 
@@ -147,12 +148,14 @@ Follow Obsidian's **Developer Policies** and **Plugin Guidelines**. In particula
 ## Agent do/don't
 
 **Do**
+
 - Add commands with stable IDs (don't rename once released).
 - Provide defaults and validation in settings.
 - Write idempotent code paths so reload/unload doesn't leak listeners or intervals.
 - Use `this.register*` helpers for everything that needs cleanup.
 
 **Don't**
+
 - Introduce network calls without an obvious user-facing reason and documentation.
 - Ship features that require cloud services without clear disclosure and explicit opt-in.
 - Store or transmit vault contents unless essential and consented.
@@ -162,6 +165,7 @@ Follow Obsidian's **Developer Policies** and **Plugin Guidelines**. In particula
 ### Organize code across multiple files
 
 **main.ts** (minimal, lifecycle only):
+
 ```ts
 import { Plugin } from "obsidian";
 import { MySettings, DEFAULT_SETTINGS } from "./settings";
@@ -178,6 +182,7 @@ export default class MyPlugin extends Plugin {
 ```
 
 **settings.ts**:
+
 ```ts
 export interface MySettings {
   enabled: boolean;
@@ -191,6 +196,7 @@ export const DEFAULT_SETTINGS: MySettings = {
 ```
 
 **commands/index.ts**:
+
 ```ts
 import { Plugin } from "obsidian";
 import { doSomething } from "./my-command";
@@ -229,14 +235,24 @@ async onload() {
 ### Register listeners safely
 
 ```ts
-this.registerEvent(this.app.workspace.on("file-open", f => { /* ... */ }));
-this.registerDomEvent(window, "resize", () => { /* ... */ });
-this.registerInterval(window.setInterval(() => { /* ... */ }, 1000));
+this.registerEvent(
+  this.app.workspace.on("file-open", (f) => {
+    /* ... */
+  })
+);
+this.registerDomEvent(window, "resize", () => {
+  /* ... */
+});
+this.registerInterval(
+  window.setInterval(() => {
+    /* ... */
+  }, 1000)
+);
 ```
 
 ## Troubleshooting
 
-- Plugin doesn't load after build: ensure `main.js` and `manifest.json` are at the top level of the plugin folder under `<Vault>/.obsidian/plugins/<plugin-id>/`. 
+- Plugin doesn't load after build: ensure `main.js` and `manifest.json` are at the top level of the plugin folder under `<Vault>/.obsidian/plugins/<plugin-id>/`.
 - Build issues: if `main.js` is missing, run `npm run build` or `npm run dev` to compile your TypeScript source code.
 - Commands not appearing: verify `addCommand` runs after `onload` and IDs are unique.
 - Settings not persisting: ensure `loadData`/`saveData` are awaited and you re-render the UI after changes.
@@ -249,6 +265,29 @@ this.registerInterval(window.setInterval(() => { /* ... */ }, 1000));
 - Developer policies: https://docs.obsidian.md/Developer+policies
 - Plugin guidelines: https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines
 - Style guide: https://help.obsidian.md/style-guide
+
+# Creating tasklists
+
+Before making any changes, make sure that a tasklist has been created for the task at hand. Even ARE NOT ALLOWED to make
+any changes to the code unless a tasklist is provided as an attached file in the prompt. If the tasklist is missing,
+you can look for a suitable tasklist in `./_tasklists/todo` but if you can't find a suitable list then you HAVE TO create
+a new tasklist for the task.
+
+If no tasklist is provided but changes are required, first respond with "⁉️ MISSING TASKLIST ⁉️". Then ask whether to look
+for the tasklist in `./_tasklists/todo` or to create a new tasklist.
+
+## Tasklists
+
+- Create a separate folder for every task in `./_tasklists`
+- Task directory names should follow the following pattern `<taskId>-<slug>[.md]`
+  - `<taskId>` is a timestamp in the following format `yyyymmdd`
+  - `<slug>` is a `-` separated short description for the task e.g. `refactor-types`
+- Brake larger tasks into subtasks
+  - The main tasklist should be called `00_spec.md`
+  - Place each subtask in a separate file and reference that file in the main task file
+  - Subtask files should be named in the following way `<taskIndex>_<subtaskSlug>.md`
+    - `<taskIndex>` is 0-prefixed running integer
+- Once a task has been completed, it should be moved to `./_tasklists/done`
 
 # !EXTREMELY IMPORTANT! DO NOT FORGET
 
