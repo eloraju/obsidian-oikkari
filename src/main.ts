@@ -12,15 +12,13 @@ export default class Oikkari extends Plugin {
 
     this.addSettingTab(new OikkariSettingsTab(this.app, this));
 
-    this.oikkariSuggest = new OikkariSuggest(this.app);
+    this.oikkariSuggest = new OikkariSuggest(this.app, this.settings);
     this.registerEditorSuggest(this.oikkariSuggest);
 
     // TODO: check that this bind is free and register it only if it is
     this.triggerHandler = this.app.scope.register(["Ctrl"], " ", () => {
       this.oikkariSuggest.manualTrigger();
     });
-
-    console.log("Oikkari loaded");
   }
 
   onunload() {

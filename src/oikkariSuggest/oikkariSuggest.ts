@@ -5,21 +5,25 @@ import {
   EditorSuggest,
   EditorSuggestContext,
   EditorSuggestTriggerInfo,
-  prepareFuzzySearch,
   renderMatches,
   TFile,
 } from "obsidian";
-import { OikkariSuggestItem } from "./suggestTypes";
-import { oikkariRootItems } from "./constants";
+import { fuzzySearchItems, providerToSuggestItem } from "utils/providerHelpers";
 import { OikkariSuggestionProvider } from "providers/providerTypes";
-import { getLastWord, getLineUpToCursor } from "providers/functions/func";
+import { getLastWord, getLineUpToCursor } from "utils/editorHelpers";
+import { providers } from "providers";
+import { OikkariSuggestItem } from "./suggestTypes";
+import { OikkariSettings } from "settings/settings";
 
 export class OikkariSuggest extends EditorSuggest<OikkariSuggestItem> {
-  private shouldTrigger = false;
-  provider: OikkariSuggestionProvider | null;
+  private isManualTrigger = false;
+  private settings: OikkariSettings;
+  currentProvider: OikkariSuggestionProvider | null = null;
+  rootProviders: OikkariSuggestionProvider[] = providers;
 
-  constructor(app: App) {
+  constructor(app: App, settings: OikkariSettings) {
     super(app);
+    this.settings = settings;
   }
 
   onTrigger(
@@ -27,7 +31,7 @@ export class OikkariSuggest extends EditorSuggest<OikkariSuggestItem> {
     editor: Editor,
     file: TFile | null
   ): EditorSuggestTriggerInfo | null {
-    if (!this.shouldTrigger) {
+    if (!this.isManualTrigger) {
       return null;
     }
 
@@ -43,27 +47,25 @@ export class OikkariSuggest extends EditorSuggest<OikkariSuggestItem> {
   getSuggestions(
     context: EditorSuggestContext
   ): OikkariSuggestItem[] | Promise<OikkariSuggestItem[]> {
-    const items = this.provider?.getSuggestions
-      ? this.provider.getSuggestions(context)
-      : oikkariRootItems;
+    if (this.currentProvider?.getSuggestions) {
+      return this.currentProvider.getSuggestions(context);
+    }
 
-    const fuzzy = prepareFuzzySearch(context.query);
-    const matches = items.map((item) => ({
-      ...item,
-      fuzzyMatch: fuzzy(item.title),
-    }));
-
-    return matches
-      .filter((item) => item.fuzzyMatch)
-      .sort((a, b) => b.fuzzyMatch!.score - a.fuzzyMatch!.score);
+    return fuzzySearchItems(
+      this.rootProviders.map(providerToSuggestItem),
+      context.query
+    ).filter((item) => item.enabled(this.settings));
   }
 
   renderSuggestion(suggestion: OikkariSuggestItem, el: HTMLElement): void {
+    if (this.currentProvider?.renderSuggestions) {
+      return this.currentProvider.renderSuggestions(suggestion, el);
+    }
+
     const container = el.createDiv();
 
     if (suggestion.fuzzyMatch) {
-      const match = suggestion.fuzzyMatch;
-      renderMatches(container, suggestion.title, match.matches);
+      renderMatches(container, suggestion.title, suggestion.fuzzyMatch.matches);
     } else {
       container.createSpan({
         text: suggestion.title,
@@ -75,32 +77,32 @@ export class OikkariSuggest extends EditorSuggest<OikkariSuggestItem> {
     suggestion: OikkariSuggestItem,
     _evt: MouseEvent | KeyboardEvent
   ): void {
-    const shouldRetrigger = this.context?.query === "";
-    suggestion.onSelect(this);
+    suggestion.onSelect({
+      close: () => this.close(),
+      manualTrigger: () => this.manualTrigger,
+      setProvider: (provider) => (this.currentProvider = provider),
+      context: this.context,
+    });
   }
 
   close(): void {
-    this.shouldTrigger = false;
-    this.provider = null;
+    this.isManualTrigger = false;
+    this.currentProvider = null;
     super.close();
   }
 
   manualTrigger(): void {
-    const fileInfo = this.app.workspace.activeEditor;
-    if (!fileInfo) {
-      return;
-    }
+    const activeEditor = this.app.workspace.activeEditor;
+    const { file, editor } = activeEditor ?? {};
 
-    const file = fileInfo.file;
-    const editor = fileInfo.editor;
     if (!editor || !file) {
       return;
     }
 
-    this.shouldTrigger = true;
-    // @ts-expect-error
-    // not in the public api
-    // last argument seems to be something like "forceShow" etc.
+    this.isManualTrigger = true;
+
+    // trigger(editor: Editor, file: TFile|null, openIfClosed: boolean)
+    // @ts-expect-error, not defined in the public api
     super.trigger(editor, file, true);
   }
 }

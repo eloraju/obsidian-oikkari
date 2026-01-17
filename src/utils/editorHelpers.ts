@@ -1,9 +1,8 @@
-import { Editor, EditorPosition, EditorSuggestContext } from "obsidian";
+import { EditorPosition, EditorSuggestContext } from "obsidian";
 
 export function getLastWord(line: string): string {
-  // i really want Array.at()...
   const words = line.split(" ");
-  return words[words.length - 1] ?? "";
+  return words.at(-1) ?? "";
 }
 
 export function getLineUpToCursor(
@@ -26,10 +25,6 @@ export function capitalise(word: string): string {
   }
 
   return word.replace(word[0]!, word[0]!.toUpperCase());
-}
-
-export function emptyLine(line: number, editor: Editor): boolean {
-  return editor.getLine(line).length === 0;
 }
 
 export function cursorAtBeginningOfLine(

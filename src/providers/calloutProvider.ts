@@ -2,16 +2,16 @@ import { OikkariSuggestionProvider } from "providers/providerTypes";
 import {
   capitalise,
   cursorAtBeginningOfLine,
-  emptyLine,
   replaceQueryWith,
-} from "providers/functions/func";
+} from "utils/editorHelpers";
 import { EditorSuggestContext } from "obsidian";
+import { fuzzySearchItems } from "utils/providerHelpers";
+import { OikkariSuggestItem } from "oikkariSuggest/suggestTypes";
 
 const callouts = [
   "note",
   "summary",
   "info",
-  "tip",
   "tip",
   "success",
   "help",
@@ -23,39 +23,51 @@ const callouts = [
   "quote",
 ];
 
-function insertCallout(
+function generateCalloutTemplate(
   type: string,
   context: EditorSuggestContext,
   newline: boolean
 ): void {
-  const res = `> [!${type}] Title`;
-  replaceQueryWith(`${newline ? "\n" : ""}${res}`, context);
+  const PLACEHOLDER_TITLE = "Title";
+  const template = `> [!${type}] ${PLACEHOLDER_TITLE}`;
+
+  replaceQueryWith(`${newline ? "\n" : ""}${template}`, context);
+
   const targetLine = newline ? context.end.line + 1 : context.end.line;
   context.editor.setSelection(
-    { ch: res.indexOf("Title"), line: targetLine },
-    { ch: res.length, line: targetLine }
+    { ch: template.indexOf(PLACEHOLDER_TITLE), line: targetLine },
+    { ch: template.length, line: targetLine }
   );
 }
 
-export function calloutProvider(): OikkariSuggestionProvider {
-  return {
-    name: "Insert call out",
-    description: "Enables quick call out template insertion",
-    saveKey: "useCalloutProvider",
-    getSuggestions: () => {
-      return callouts.map((callout) => ({
-        title: capitalise(callout),
-        enabled: () => true,
-        onSelect: (oikkari) => {
-          if (!oikkari.context) {
-            return oikkari.close();
-          }
+function insertCallout(
+  callout: string,
+  close: () => void,
+  context: EditorSuggestContext | null
+): void {
+  if (!context) {
+    close();
+    return;
+  }
 
-          const insertNewLine = !cursorAtBeginningOfLine(oikkari.context);
-          insertCallout(callout, oikkari.context, insertNewLine);
-          oikkari.close();
-        },
-      }));
-    },
-  };
+  const insertNewLine = !cursorAtBeginningOfLine(context);
+  generateCalloutTemplate(callout, context, insertNewLine);
+  close();
 }
+
+function getSuggestions(context: EditorSuggestContext): OikkariSuggestItem[] {
+  const items: OikkariSuggestItem[] = callouts.map((callout) => ({
+    title: capitalise(callout),
+    enabled: () => true,
+    onSelect: ({ close, context }) => insertCallout(callout, close, context),
+  }));
+
+  return fuzzySearchItems(items, context.query);
+}
+
+export const calloutProvider: OikkariSuggestionProvider = {
+  name: "Insert call out",
+  description: "Enables quick call out template insertion",
+  saveKey: "useCalloutProvider",
+  getSuggestions,
+};

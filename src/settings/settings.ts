@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting, ToggleComponent } from "obsidian";
-import Oikkari from "../main";
+import Oikkari from "main";
 import { OikkariSuggestionProvider } from "providers/providerTypes";
-import { providers } from "../providers";
+import { providers } from "providers";
 
 export type OikkariSettings = Record<string, boolean | undefined>;
 
@@ -17,13 +17,12 @@ export class OikkariSettingsTab extends PluginSettingTab {
     containerEl: HTMLElement,
     provider: OikkariSuggestionProvider
   ): void {
-    const setting = new Setting(containerEl)
+    new Setting(containerEl)
       .setName(provider.name)
       .setDesc(provider.description)
       .addToggle(
-        (enabled): ToggleComponent =>
-          enabled
-            // start off disabled --> enable will save the key
+        (component: ToggleComponent): ToggleComponent =>
+          component
             .setValue(this.plugin.settings[provider.saveKey] ?? false)
             .onChange(async (value: boolean) => {
               this.plugin.settings[provider.saveKey] = value;
@@ -38,7 +37,7 @@ export class OikkariSettingsTab extends PluginSettingTab {
     containerEl.empty();
 
     for (const provider of providers) {
-      this.addProviderToggle(containerEl, provider());
+      this.addProviderToggle(containerEl, provider);
     }
   }
 }
