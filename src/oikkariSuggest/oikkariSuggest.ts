@@ -79,7 +79,7 @@ export class OikkariSuggest extends EditorSuggest<OikkariSuggestItem> {
   ): void {
     suggestion.onSelect({
       close: () => this.close(),
-      manualTrigger: () => this.manualTrigger,
+      manualTrigger: () => this.manualTrigger(),
       setProvider: (provider) => (this.currentProvider = provider),
       context: this.context,
     });
@@ -100,7 +100,6 @@ export class OikkariSuggest extends EditorSuggest<OikkariSuggestItem> {
     }
 
     this.isManualTrigger = true;
-
     // trigger(editor: Editor, file: TFile|null, openIfClosed: boolean)
     // @ts-expect-error, not defined in the public api
     super.trigger(editor, file, true);

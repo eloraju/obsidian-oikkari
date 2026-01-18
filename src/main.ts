@@ -6,6 +6,7 @@ export default class Oikkari extends Plugin {
   settings: OikkariSettings;
   oikkariSuggest: OikkariSuggest;
   triggerHandler: KeymapEventHandler;
+  id: string = "oikkari";
 
   async onload() {
     await this.loadSettings();
@@ -15,14 +16,17 @@ export default class Oikkari extends Plugin {
     this.oikkariSuggest = new OikkariSuggest(this.app, this.settings);
     this.registerEditorSuggest(this.oikkariSuggest);
 
-    // TODO: check that this bind is free and register it only if it is
-    this.triggerHandler = this.app.scope.register(["Ctrl"], " ", () => {
-      this.oikkariSuggest.manualTrigger();
+    this.addCommand({
+      id: this.id,
+      name: "Open Oikkari completions",
+      hotkeys: [{ modifiers: ["Ctrl"], key: " " }],
+      callback: () => this.oikkariSuggest.manualTrigger(),
     });
   }
 
   onunload() {
     this.app.scope.unregister(this.triggerHandler);
+    this.removeCommand(this.id);
   }
 
   async loadSettings() {
