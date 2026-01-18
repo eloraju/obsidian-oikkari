@@ -26,16 +26,50 @@ export class OikkariSuggest extends EditorSuggest<OikkariSuggestItem> {
     this.settings = settings;
   }
 
+  findMatchingProvider(
+    cursor: EditorPosition,
+    line: string,
+    filter: (provider: OikkariSuggestionProvider) => boolean = () => true
+  ): EditorSuggestTriggerInfo | null {
+    for (const provider of this.rootProviders) {
+      if (!provider.autocompleteTrigger || !filter(provider)) {
+        continue;
+      }
+
+      const providerRes = provider.autocompleteTrigger(
+        cursor,
+        line,
+        this.settings[provider.saveKey]?.autocompleteRegex
+      );
+
+      if (providerRes) {
+        this.currentProvider = provider;
+        return providerRes;
+      }
+    }
+    return null;
+  }
+
   onTrigger(
     cursor: EditorPosition,
     editor: Editor,
-    file: TFile | null
+    _file: TFile | null
   ): EditorSuggestTriggerInfo | null {
+    const line = editor.getLine(cursor.line);
+
     if (!this.isManualTrigger) {
-      return null;
+      return this.findMatchingProvider(
+        cursor,
+        line,
+        (p) => this.settings[p.saveKey]?.autocompleteEnabled ?? false
+      );
     }
 
-    const line = editor.getLine(cursor.line);
+    const providerResult = this.findMatchingProvider(cursor, line);
+    if (providerResult) {
+      return providerResult;
+    }
+
     const query = getLastWord(getLineUpToCursor(cursor, line));
     return {
       start: { ch: cursor.ch - query.length, line: cursor.line },

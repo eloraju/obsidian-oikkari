@@ -1,10 +1,17 @@
-import { OikkariSuggestionProvider } from "providers/providerTypes";
+import {
+  OikkariSuggestionProvider,
+  ProviderSettings,
+} from "providers/providerTypes";
 import {
   capitalise,
   cursorAtBeginningOfLine,
   replaceQueryWith,
 } from "utils/editorHelpers";
-import { EditorSuggestContext } from "obsidian";
+import {
+  EditorPosition,
+  EditorSuggestContext,
+  EditorSuggestTriggerInfo,
+} from "obsidian";
 import { fuzzySearchItems } from "utils/providerHelpers";
 import { OikkariSuggestItem } from "oikkariSuggest/suggestTypes";
 
@@ -22,6 +29,12 @@ const callouts = [
   "example",
   "quote",
 ];
+
+const DEFAULT_SETTINGS: ProviderSettings = {
+  autocompleteEnabled: false,
+  enabled: true,
+  autocompleteRegex: "^> ?\\[!",
+};
 
 function generateCalloutTemplate(
   type: string,
@@ -55,6 +68,28 @@ function insertCallout(
   close();
 }
 
+function autocompleteTrigger(
+  cursor: EditorPosition,
+  line: string,
+  userSpecifiedRegex?: string
+): EditorSuggestTriggerInfo | null {
+  const calloutRegex = userSpecifiedRegex
+    ? RegExp(userSpecifiedRegex)
+    : RegExp(DEFAULT_SETTINGS.autocompleteRegex);
+  const match = calloutRegex.exec(line);
+  if (!match) {
+    return null;
+  }
+
+  const query = line.split(match[0])[1] ?? "";
+
+  return {
+    start: { ch: cursor.ch - query.length, line: cursor.line },
+    end: cursor,
+    query,
+  };
+}
+
 function getSuggestions(context: EditorSuggestContext): OikkariSuggestItem[] {
   const items: OikkariSuggestItem[] = callouts.map((callout) => ({
     title: capitalise(callout),
@@ -66,8 +101,10 @@ function getSuggestions(context: EditorSuggestContext): OikkariSuggestItem[] {
 }
 
 export const calloutProvider: OikkariSuggestionProvider = {
-  name: "Insert call out",
+  name: "Call out provider",
   description: "Enables quick call out template insertion",
-  saveKey: "useCalloutProvider",
+  saveKey: "callout-provider",
+  defaultSettings: DEFAULT_SETTINGS,
   getSuggestions,
+  autocompleteTrigger,
 };

@@ -10,7 +10,7 @@ export function providerToSuggestItem(
   return {
     title: provider.name,
     enabled: (settings: OikkariSettings): boolean =>
-      settings[provider.saveKey] ?? false,
+      settings[provider.saveKey]?.enabled ?? false,
     onSelect: ({
       close,
       context,

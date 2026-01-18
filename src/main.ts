@@ -1,6 +1,7 @@
 import { KeymapEventHandler, Plugin } from "obsidian";
 import { OikkariSettings, OikkariSettingsTab } from "./settings/settings";
 import { OikkariSuggest } from "oikkariSuggest/oikkariSuggest";
+import { defaultProviderSettings, providers } from "providers";
 
 export default class Oikkari extends Plugin {
   settings: OikkariSettings;
@@ -31,7 +32,7 @@ export default class Oikkari extends Plugin {
 
   async loadSettings() {
     this.settings = Object.assign(
-      {},
+      defaultProviderSettings,
       (await this.loadData()) as Partial<OikkariSettings>
     );
   }
