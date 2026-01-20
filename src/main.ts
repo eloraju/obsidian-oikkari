@@ -1,12 +1,11 @@
 import { KeymapEventHandler, Plugin } from "obsidian";
 import { OikkariSettings, OikkariSettingsTab } from "./settings/settings";
 import { OikkariSuggest } from "oikkariSuggest/oikkariSuggest";
-import { defaultProviderSettings, providers } from "providers";
+import { defaultProviderSettings } from "providers";
 
 export default class Oikkari extends Plugin {
   settings: OikkariSettings;
   oikkariSuggest: OikkariSuggest;
-  triggerHandler: KeymapEventHandler;
   id: string = "oikkari";
 
   async onload() {
@@ -25,13 +24,9 @@ export default class Oikkari extends Plugin {
     });
   }
 
-  onunload() {
-    this.app.scope.unregister(this.triggerHandler);
-    this.removeCommand(this.id);
-  }
-
   async loadSettings() {
     this.settings = Object.assign(
+      {},
       defaultProviderSettings,
       (await this.loadData()) as Partial<OikkariSettings>
     );

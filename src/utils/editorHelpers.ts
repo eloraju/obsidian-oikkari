@@ -24,7 +24,7 @@ export function capitalise(word: string): string {
     return word;
   }
 
-  return word.replace(word[0]!, word[0]!.toUpperCase());
+  return word[0]!.toUpperCase() + word.slice(1);
 }
 
 export function cursorAtBeginningOfLine(

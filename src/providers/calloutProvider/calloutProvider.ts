@@ -5,6 +5,8 @@ import {
 import {
   capitalise,
   cursorAtBeginningOfLine,
+  getLastWord,
+  getLineUpToCursor,
   replaceQueryWith,
 } from "utils/editorHelpers";
 import {
@@ -12,8 +14,24 @@ import {
   EditorSuggestContext,
   EditorSuggestTriggerInfo,
 } from "obsidian";
-import { fuzzySearchItems } from "utils/providerHelpers";
+import {
+  defaultProviderTrigger,
+  fuzzySearchItems,
+} from "utils/providerHelpers";
 import { OikkariSuggestItem } from "oikkariSuggest/suggestTypes";
+
+const DEFAULT_SETTINGS: ProviderSettings = {
+  autocompletion: {
+    enabled: false,
+    defaultRegexStr: "^> ?\\[!",
+  },
+  enabled: true,
+};
+
+let userRegex: RegExp | null = null;
+const defaultRegex: RegExp = RegExp(
+  DEFAULT_SETTINGS.autocompletion.defaultRegexStr
+);
 
 const callouts = [
   "note",
@@ -30,58 +48,81 @@ const callouts = [
   "quote",
 ];
 
-const DEFAULT_SETTINGS: ProviderSettings = {
-  autocompleteEnabled: false,
-  enabled: true,
-  autocompleteRegex: "^> ?\\[!",
-};
+const calloutItems: OikkariSuggestItem[] = callouts.map((callout) => ({
+  title: capitalise(callout),
+  enabled: () => true,
+  onSelect: (context) => insertCallout(callout, context),
+}));
 
 function generateCalloutTemplate(
   type: string,
-  context: EditorSuggestContext,
-  newline: boolean
+  context: EditorSuggestContext
 ): void {
+  const currentLine = context.editor.getLine(context.end.line);
+  const hasCalloutPrefix = defaultRegex.test(currentLine);
+  const insertNewLine = !hasCalloutPrefix && !cursorAtBeginningOfLine(context);
+
   const PLACEHOLDER_TITLE = "Title";
-  const template = `> [!${type}] ${PLACEHOLDER_TITLE}`;
+  const template = `${
+    hasCalloutPrefix ? "" : "> [!"
+  }${type}] ${PLACEHOLDER_TITLE}`;
 
-  replaceQueryWith(`${newline ? "\n" : ""}${template}`, context);
+  replaceQueryWith(`${insertNewLine ? "\n" : ""}${template}`, context);
 
-  const targetLine = newline ? context.end.line + 1 : context.end.line;
+  const targetLine = insertNewLine ? context.end.line + 1 : context.end.line;
+  const lineWithTemplate = context.editor.getLine(targetLine);
   context.editor.setSelection(
-    { ch: template.indexOf(PLACEHOLDER_TITLE), line: targetLine },
-    { ch: template.length, line: targetLine }
+    { ch: lineWithTemplate.indexOf(PLACEHOLDER_TITLE), line: targetLine },
+    { ch: lineWithTemplate.length, line: targetLine }
   );
 }
 
 function insertCallout(
   callout: string,
-  close: () => void,
-  context: EditorSuggestContext | null
-): void {
-  if (!context) {
-    close();
-    return;
-  }
-
-  const insertNewLine = !cursorAtBeginningOfLine(context);
-  generateCalloutTemplate(callout, context, insertNewLine);
-  close();
+  context: EditorSuggestContext
+): OikkariSuggestionProvider | null {
+  generateCalloutTemplate(callout, context);
+  return null;
 }
 
-function autocompleteTrigger(
+function onTrigger(
+  cursor: EditorPosition,
+  line: string
+): EditorSuggestTriggerInfo | null {
+  const lastWord = getLastWord(getLineUpToCursor(cursor, line));
+  if (lastWord === ">[!" || lastWord === "[!") {
+    return {
+      end: cursor,
+      start: cursor,
+      query: "",
+    };
+  }
+  return defaultProviderTrigger(cursor, line);
+}
+
+function tryAutocomplete(
   cursor: EditorPosition,
   line: string,
-  userSpecifiedRegex?: string
-): EditorSuggestTriggerInfo | null {
-  const calloutRegex = userSpecifiedRegex
-    ? RegExp(userSpecifiedRegex)
-    : RegExp(DEFAULT_SETTINGS.autocompleteRegex);
+  userRegexString?: string
+) {
+  if (userRegexString && (!userRegex || userRegex.source !== userRegexString)) {
+    try {
+      userRegex = RegExp(userRegexString);
+    } catch {
+      userRegex = null;
+    }
+  } else if (!userRegexString && userRegex) {
+    userRegex = null;
+  }
+
+  const calloutRegex = userRegex ?? defaultRegex;
+
   const match = calloutRegex.exec(line);
   if (!match) {
     return null;
   }
 
-  const query = line.split(match[0])[1] ?? "";
+  const query = line.substring(match.index + match[0].length) ?? "";
 
   return {
     start: { ch: cursor.ch - query.length, line: cursor.line },
@@ -90,21 +131,18 @@ function autocompleteTrigger(
   };
 }
 
-function getSuggestions(context: EditorSuggestContext): OikkariSuggestItem[] {
-  const items: OikkariSuggestItem[] = callouts.map((callout) => ({
-    title: capitalise(callout),
-    enabled: () => true,
-    onSelect: ({ close, context }) => insertCallout(callout, close, context),
-  }));
-
-  return fuzzySearchItems(items, context.query);
-}
-
 export const calloutProvider: OikkariSuggestionProvider = {
-  name: "Call out provider",
-  description: "Enables quick call out template insertion",
-  saveKey: "callout-provider",
+  hasSettings: true,
   defaultSettings: DEFAULT_SETTINGS,
-  getSuggestions,
-  autocompleteTrigger,
+  settingsMetadata: {
+    description: "Enables quick call out template insertion",
+    title: "Call out provider",
+  },
+  suggestionMetadata: {
+    title: "Insert Call out",
+  },
+  name: "callout-provider",
+  getSuggestions: (context) => fuzzySearchItems(calloutItems, context.query),
+  onTrigger,
+  tryAutocomplete,
 };

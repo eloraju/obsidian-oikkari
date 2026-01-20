@@ -1,34 +1,27 @@
-import { replaceQueryWith } from "utils/editorHelpers";
+import {
+  getLastWord,
+  getLineUpToCursor,
+  replaceQueryWith,
+} from "utils/editorHelpers";
 import { OikkariSettings } from "settings/settings";
 import { OikkariSuggestionProvider } from "providers/providerTypes";
-import { prepareFuzzySearch } from "obsidian";
+import {
+  EditorPosition,
+  EditorSuggestTriggerInfo,
+  prepareFuzzySearch,
+} from "obsidian";
 import { OikkariSuggestItem } from "oikkariSuggest/suggestTypes";
 
-export function providerToSuggestItem(
+export function mapProviderToSuggestItem(
   provider: OikkariSuggestionProvider
 ): OikkariSuggestItem {
   return {
-    title: provider.name,
+    title: provider.suggestionMetadata.title,
     enabled: (settings: OikkariSettings): boolean =>
-      settings[provider.saveKey]?.enabled ?? false,
-    onSelect: ({
-      close,
-      context,
-      manualTrigger: retriggerSuggest,
-      setProvider,
-    }) => {
-      if (!context) {
-        close();
-        return;
-      }
-
-      const previousQuery = context.query;
+      settings[provider.name]?.enabled ?? false,
+    onSelect: (context) => {
       replaceQueryWith("", context);
-      setProvider(provider);
-
-      if (previousQuery === "") {
-        retriggerSuggest();
-      }
+      return provider;
     },
   };
 }
@@ -46,4 +39,16 @@ export function fuzzySearchItems(
   return matches
     .filter((item) => item.fuzzyMatch)
     .sort((a, b) => b.fuzzyMatch!.score - a.fuzzyMatch!.score);
+}
+
+export function defaultProviderTrigger(
+  cursor: EditorPosition,
+  line: string
+): EditorSuggestTriggerInfo {
+  const query = getLastWord(getLineUpToCursor(cursor, line));
+  return {
+    start: { ch: cursor.ch - query.length, line: cursor.line },
+    end: cursor,
+    query,
+  };
 }

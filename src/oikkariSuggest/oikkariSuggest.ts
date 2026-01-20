@@ -8,38 +8,45 @@ import {
   renderMatches,
   TFile,
 } from "obsidian";
-import { fuzzySearchItems, providerToSuggestItem } from "utils/providerHelpers";
 import { OikkariSuggestionProvider } from "providers/providerTypes";
-import { getLastWord, getLineUpToCursor } from "utils/editorHelpers";
-import { providers } from "providers";
+import { providers, providerSuggestionItems } from "providers";
 import { OikkariSuggestItem } from "./suggestTypes";
 import { OikkariSettings } from "settings/settings";
+import {
+  defaultProviderTrigger,
+  fuzzySearchItems,
+} from "utils/providerHelpers";
 
 export class OikkariSuggest extends EditorSuggest<OikkariSuggestItem> {
   private isManualTrigger = false;
   private settings: OikkariSettings;
-  currentProvider: OikkariSuggestionProvider | null = null;
-  rootProviders: OikkariSuggestionProvider[] = providers;
+  private currentProvider: OikkariSuggestionProvider | null = null;
+  private allProviders: OikkariSuggestionProvider[] = providers;
 
   constructor(app: App, settings: OikkariSettings) {
     super(app);
     this.settings = settings;
   }
 
-  findMatchingProvider(
+  tryAutocomplete(
     cursor: EditorPosition,
-    line: string,
-    filter: (provider: OikkariSuggestionProvider) => boolean = () => true
+    line: string
   ): EditorSuggestTriggerInfo | null {
-    for (const provider of this.rootProviders) {
-      if (!provider.autocompleteTrigger || !filter(provider)) {
+    for (const provider of this.allProviders) {
+      const providerSettings = this.settings[provider.name];
+      if (
+        !providerSettings ||
+        !providerSettings.enabled ||
+        !providerSettings.autocompletion.enabled ||
+        !provider.tryAutocomplete
+      ) {
         continue;
       }
 
-      const providerRes = provider.autocompleteTrigger(
+      const providerRes = provider.tryAutocomplete(
         cursor,
         line,
-        this.settings[provider.saveKey]?.autocompleteRegex
+        providerSettings.autocompletion.userRegexStr
       );
 
       if (providerRes) {
@@ -58,42 +65,30 @@ export class OikkariSuggest extends EditorSuggest<OikkariSuggestItem> {
     const line = editor.getLine(cursor.line);
 
     if (!this.isManualTrigger) {
-      return this.findMatchingProvider(
-        cursor,
-        line,
-        (p) => this.settings[p.saveKey]?.autocompleteEnabled ?? false
-      );
+      return this.tryAutocomplete(cursor, line);
     }
 
-    const providerResult = this.findMatchingProvider(cursor, line);
-    if (providerResult) {
-      return providerResult;
+    if (this.currentProvider) {
+      return this.currentProvider.onTrigger(cursor, line);
     }
 
-    const query = getLastWord(getLineUpToCursor(cursor, line));
-    return {
-      start: { ch: cursor.ch - query.length, line: cursor.line },
-      end: cursor,
-      query,
-    };
+    return defaultProviderTrigger(cursor, line);
   }
 
   getSuggestions(
     context: EditorSuggestContext
   ): OikkariSuggestItem[] | Promise<OikkariSuggestItem[]> {
-    if (this.currentProvider?.getSuggestions) {
+    if (this.currentProvider) {
       return this.currentProvider.getSuggestions(context);
     }
 
-    return fuzzySearchItems(
-      this.rootProviders.map(providerToSuggestItem),
-      context.query
-    ).filter((item) => item.enabled(this.settings));
+    return fuzzySearchItems(providerSuggestionItems, context.query);
   }
 
   renderSuggestion(suggestion: OikkariSuggestItem, el: HTMLElement): void {
-    if (this.currentProvider?.renderSuggestions) {
-      return this.currentProvider.renderSuggestions(suggestion, el);
+    if (this.currentProvider?.renderSuggestion) {
+      this.currentProvider.renderSuggestion(suggestion, el);
+      return;
     }
 
     const container = el.createDiv();
@@ -111,12 +106,15 @@ export class OikkariSuggest extends EditorSuggest<OikkariSuggestItem> {
     suggestion: OikkariSuggestItem,
     _evt: MouseEvent | KeyboardEvent
   ): void {
-    suggestion.onSelect({
-      close: () => this.close(),
-      manualTrigger: () => this.manualTrigger(),
-      setProvider: (provider) => (this.currentProvider = provider),
-      context: this.context,
-    });
+    if (this.context) {
+      const nextProvider = suggestion.onSelect(this.context);
+      if (nextProvider) {
+        this.currentProvider = nextProvider;
+        this.manualTrigger();
+      } else {
+        this.close();
+      }
+    }
   }
 
   close(): void {
@@ -134,8 +132,15 @@ export class OikkariSuggest extends EditorSuggest<OikkariSuggestItem> {
     }
 
     this.isManualTrigger = true;
-    // trigger(editor: Editor, file: TFile|null, openIfClosed: boolean)
-    // @ts-expect-error, not defined in the public api
-    super.trigger(editor, file, true);
+    try {
+      // trigger(editor: Editor, file: TFile|null, openIfClosed: boolean)
+      // @ts-expect-error, not defined in the public api
+      super.trigger(editor, file, true);
+    } catch {
+      console.warn(
+        "Oikkari: EditorSuggest.trigger API changed, manual trigger unavailable"
+      );
+      this.isManualTrigger = false;
+    }
   }
 }
