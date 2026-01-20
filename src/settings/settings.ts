@@ -43,10 +43,11 @@ export class OikkariSettingsTab extends PluginSettingTab {
     provider: OikkariSuggestionProviderWithSettings,
     updateSettings: (old: ProviderSettings) => ProviderSettings
   ): Promise<void> {
-    const currentSettings = this.plugin.settings[provider.name] ?? {
+    const currentSettings = this.plugin.providerSettings[provider.name] ?? {
       ...provider.defaultSettings,
     };
-    this.plugin.settings[provider.name] = updateSettings(currentSettings);
+    this.plugin.providerSettings[provider.name] =
+      updateSettings(currentSettings);
     await this.plugin.saveSettings();
     this.display();
   }
@@ -59,7 +60,7 @@ export class OikkariSettingsTab extends PluginSettingTab {
 
     for (const provider of providers.filter((p) => p.hasSettings)) {
       const savedSettings =
-        this.plugin.settings[provider.name] ?? provider.defaultSettings;
+        this.plugin.providerSettings[provider.name] ?? provider.defaultSettings;
 
       const providerContainer = containerEl.createDiv();
       providerContainer.createEl("h2", {

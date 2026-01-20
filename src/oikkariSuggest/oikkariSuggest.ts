@@ -9,37 +9,32 @@ import {
   TFile,
 } from "obsidian";
 import { OikkariSuggestionProvider } from "providers/providerTypes";
-import { providers, providerSuggestionItems } from "providers";
+import { providerSuggestionItems } from "providers";
 import { OikkariSuggestItem } from "./suggestTypes";
 import { OikkariSettings } from "settings/settings";
 import {
   defaultProviderTrigger,
   fuzzySearchItems,
 } from "utils/providerHelpers";
+import Oikkari from "main";
 
 export class OikkariSuggest extends EditorSuggest<OikkariSuggestItem> {
   private isManualTrigger = false;
-  private settings: OikkariSettings;
+  private oikkari: Oikkari;
   private currentProvider: OikkariSuggestionProvider | null = null;
-  private allProviders: OikkariSuggestionProvider[] = providers;
 
-  constructor(app: App, settings: OikkariSettings) {
+  constructor(app: App, oikkari: Oikkari) {
     super(app);
-    this.settings = settings;
+    this.oikkari = oikkari;
   }
 
   tryAutocomplete(
     cursor: EditorPosition,
     line: string
   ): EditorSuggestTriggerInfo | null {
-    for (const provider of this.allProviders) {
-      const providerSettings = this.settings[provider.name];
-      if (
-        !providerSettings ||
-        !providerSettings.enabled ||
-        !providerSettings.autocompletion.enabled ||
-        !provider.tryAutocomplete
-      ) {
+    for (const provider of this.oikkari.autocompletingProviders) {
+      const providerSettings = this.oikkari.providerSettings[provider.name];
+      if (!providerSettings || !provider.tryAutocomplete) {
         continue;
       }
 
