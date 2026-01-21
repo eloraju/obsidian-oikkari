@@ -1,9 +1,9 @@
 import { OikkariSuggestItem } from "oikkariSuggest/suggestTypes";
-import { calloutProvider } from "./calloutProvider/calloutProvider";
+import { createCalloutProvider } from "./calloutProvider/calloutProvider";
 import { mapProviderToSuggestItem } from "utils/providerHelpers";
 import { ProviderSettings } from "./providerTypes";
 
-export const providers = [calloutProvider];
+export const providers = [createCalloutProvider()];
 
 export const providerSuggestionItems: OikkariSuggestItem[] = providers.map(
   mapProviderToSuggestItem

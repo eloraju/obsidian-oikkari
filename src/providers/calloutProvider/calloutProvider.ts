@@ -28,11 +28,6 @@ const DEFAULT_SETTINGS: ProviderSettings = {
   enabled: true,
 };
 
-let userRegex: RegExp | null = null;
-const defaultRegex: RegExp = RegExp(
-  DEFAULT_SETTINGS.autocompletion.defaultRegexStr
-);
-
 const callouts = [
   "note",
   "summary",
@@ -48,10 +43,17 @@ const callouts = [
   "quote",
 ];
 
+const defaultRegex: RegExp = RegExp(
+  DEFAULT_SETTINGS.autocompletion.defaultRegexStr
+);
+
 const calloutItems: OikkariSuggestItem[] = callouts.map((callout) => ({
   title: capitalise(callout),
   enabled: () => true,
-  onSelect: (context) => insertCallout(callout, context),
+  onSelect: (context) => {
+    generateCalloutTemplate(callout, context);
+    return null;
+  },
 }));
 
 function generateCalloutTemplate(
@@ -77,14 +79,6 @@ function generateCalloutTemplate(
   );
 }
 
-function insertCallout(
-  callout: string,
-  context: EditorSuggestContext
-): OikkariSuggestionProvider | null {
-  generateCalloutTemplate(callout, context);
-  return null;
-}
-
 function onTrigger(
   cursor: EditorPosition,
   line: string
@@ -103,20 +97,8 @@ function onTrigger(
 function tryAutocomplete(
   cursor: EditorPosition,
   line: string,
-  userRegexString?: string
+  calloutRegex: RegExp
 ) {
-  if (userRegexString && (!userRegex || userRegex.source !== userRegexString)) {
-    try {
-      userRegex = RegExp(userRegexString);
-    } catch {
-      userRegex = null;
-    }
-  } else if (!userRegexString && userRegex) {
-    userRegex = null;
-  }
-
-  const calloutRegex = userRegex ?? defaultRegex;
-
   const match = calloutRegex.exec(line);
   if (!match) {
     return null;
@@ -131,18 +113,38 @@ function tryAutocomplete(
   };
 }
 
-export const calloutProvider: OikkariSuggestionProvider = {
-  hasSettings: true,
-  defaultSettings: DEFAULT_SETTINGS,
-  settingsMetadata: {
-    description: "Enables quick call out template insertion",
-    title: "Call out provider",
-  },
-  suggestionMetadata: {
-    title: "Insert Call out",
-  },
-  name: "callout-provider",
-  getSuggestions: (context) => fuzzySearchItems(calloutItems, context.query),
-  onTrigger,
-  tryAutocomplete,
-};
+export function createCalloutProvider(): OikkariSuggestionProvider {
+  let userRegex: RegExp | null = null;
+
+  function getRegex(userRegexString?: string): RegExp {
+    if (!userRegexString) return defaultRegex;
+
+    if (!userRegex || userRegex.source !== userRegexString) {
+      try {
+        userRegex = RegExp(userRegexString);
+        return userRegex;
+      } catch {
+        return defaultRegex;
+      }
+    }
+
+    return userRegex;
+  }
+
+  return {
+    hasSettings: true,
+    defaultSettings: DEFAULT_SETTINGS,
+    settingsMetadata: {
+      description: "Enables quick call out template insertion",
+      title: "Call out provider",
+    },
+    suggestionMetadata: {
+      title: "Insert Call out",
+    },
+    name: "callout-provider",
+    getSuggestions: (context) => fuzzySearchItems(calloutItems, context.query),
+    onTrigger,
+    tryAutocomplete: (cursor, line, userRegex) =>
+      tryAutocomplete(cursor, line, getRegex(userRegex)),
+  };
+}
