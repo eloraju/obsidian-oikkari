@@ -21,9 +21,6 @@
 			"DOM",
 			"ES2024"
 		],
-		"types": [
-			"obsidian-typings"
-		]
 	},
 	"include": [
 		"src/**/*.ts"

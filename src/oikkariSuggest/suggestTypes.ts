@@ -8,5 +8,8 @@ export type OikkariSuggestItem = {
   onSelect: (context: EditorSuggestContext) => OikkariSuggestionProvider | null;
   description?: string;
   icon?: string;
-  fuzzyMatch?: SearchResult | null;
+};
+
+export type OikkariMatchedSuggestItem = OikkariSuggestItem & {
+  fuzzyMatch: SearchResult;
 };

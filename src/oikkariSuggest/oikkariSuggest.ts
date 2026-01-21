@@ -10,8 +10,7 @@ import {
 } from "obsidian";
 import { OikkariSuggestionProvider } from "providers/providerTypes";
 import { providerSuggestionItems } from "providers";
-import { OikkariSuggestItem } from "./suggestTypes";
-import { OikkariSettings } from "settings/settings";
+import { OikkariMatchedSuggestItem, OikkariSuggestItem } from "./suggestTypes";
 import {
   defaultProviderTrigger,
   fuzzySearchItems,
@@ -72,7 +71,7 @@ export class OikkariSuggest extends EditorSuggest<OikkariSuggestItem> {
 
   getSuggestions(
     context: EditorSuggestContext
-  ): OikkariSuggestItem[] | Promise<OikkariSuggestItem[]> {
+  ): OikkariMatchedSuggestItem[] | Promise<OikkariMatchedSuggestItem[]> {
     if (this.currentProvider) {
       return this.currentProvider.getSuggestions(context);
     }
@@ -80,7 +79,10 @@ export class OikkariSuggest extends EditorSuggest<OikkariSuggestItem> {
     return fuzzySearchItems(providerSuggestionItems, context.query);
   }
 
-  renderSuggestion(suggestion: OikkariSuggestItem, el: HTMLElement): void {
+  renderSuggestion(
+    suggestion: OikkariMatchedSuggestItem,
+    el: HTMLElement
+  ): void {
     if (this.currentProvider?.renderSuggestion) {
       this.currentProvider.renderSuggestion(suggestion, el);
       return;

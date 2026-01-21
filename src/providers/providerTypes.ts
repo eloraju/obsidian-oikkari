@@ -3,7 +3,10 @@ import {
   EditorSuggestContext,
   EditorSuggestTriggerInfo,
 } from "obsidian";
-import { OikkariSuggestItem } from "oikkariSuggest/suggestTypes";
+import {
+  OikkariMatchedSuggestItem,
+  OikkariSuggestItem,
+} from "oikkariSuggest/suggestTypes";
 
 type AutocompleteSettings = {
   enabled: boolean;
@@ -30,7 +33,9 @@ export type ProviderSuggestionMetadata = {
 type OikkariSuggestionProviderBase = {
   name: string;
   suggestionMetadata: ProviderSuggestionMetadata;
-  getSuggestions: (context: EditorSuggestContext) => OikkariSuggestItem[];
+  getSuggestions: (
+    context: EditorSuggestContext
+  ) => OikkariMatchedSuggestItem[];
   renderSuggestion?: (suggestion: OikkariSuggestItem, el: HTMLElement) => void;
   onTrigger: (
     cursor: EditorPosition,

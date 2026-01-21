@@ -10,7 +10,10 @@ import {
   EditorSuggestTriggerInfo,
   prepareFuzzySearch,
 } from "obsidian";
-import { OikkariSuggestItem } from "oikkariSuggest/suggestTypes";
+import {
+  OikkariMatchedSuggestItem,
+  OikkariSuggestItem,
+} from "oikkariSuggest/suggestTypes";
 
 export function mapProviderToSuggestItem(
   provider: OikkariSuggestionProvider
@@ -29,16 +32,18 @@ export function mapProviderToSuggestItem(
 export function fuzzySearchItems(
   items: OikkariSuggestItem[],
   query: string
-): OikkariSuggestItem[] {
+): OikkariMatchedSuggestItem[] {
   const fuzzy = prepareFuzzySearch(query);
-  const matches = items.map((item) => ({
-    ...item,
-    fuzzyMatch: fuzzy(item.title),
-  }));
 
-  return matches
-    .filter((item) => item.fuzzyMatch)
-    .sort((a, b) => b.fuzzyMatch!.score - a.fuzzyMatch!.score);
+  const matches: OikkariMatchedSuggestItem[] = [];
+  for (const item of items) {
+    const fuzzyMatch = fuzzy(item.title);
+
+    if (!fuzzyMatch) continue;
+
+    matches.push({ ...item, fuzzyMatch });
+  }
+  return matches.sort((a, b) => b.fuzzyMatch.score - a.fuzzyMatch.score);
 }
 
 export function defaultProviderTrigger(
