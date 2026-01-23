@@ -13,12 +13,17 @@ import {
   EditorPosition,
   EditorSuggestContext,
   EditorSuggestTriggerInfo,
+  renderMatches,
+  setIcon,
 } from "obsidian";
 import {
   defaultProviderTrigger,
   fuzzySearchItems,
 } from "utils/providerHelpers";
-import { OikkariSuggestItem } from "oikkariSuggest/suggestTypes";
+import {
+  OikkariMatchedSuggestItem,
+  OikkariSuggestItem,
+} from "oikkariSuggest/suggestTypes";
 
 const DEFAULT_SETTINGS: ProviderSettings = {
   autocompletion: {
@@ -28,33 +33,43 @@ const DEFAULT_SETTINGS: ProviderSettings = {
   enabled: true,
 };
 
-const callouts = [
-  "note",
-  "summary",
-  "info",
-  "tip",
-  "success",
-  "help",
-  "warning",
-  "fail",
-  "error",
-  "bug",
-  "example",
-  "quote",
+type CalloutMeta = {
+  name: string;
+  icon: string;
+  color?: string;
+};
+
+const callouts: CalloutMeta[] = [
+  { name: "note", icon: "pencil", color: "default" },
+  { name: "summary", icon: "clipboard-list" },
+  { name: "info", icon: "info" },
+  { name: "tip", icon: "flame" },
+  { name: "success", icon: "check" },
+  { name: "help", icon: "circle-help", color: "question" },
+  { name: "warning", icon: "triangle-alert" },
+  { name: "fail", icon: "x" },
+  { name: "error", icon: "zap" },
+  { name: "bug", icon: "bug" },
+  { name: "example", icon: "list" },
+  { name: "quote", icon: "quote" },
 ];
 
 const defaultRegex: RegExp = RegExp(
   DEFAULT_SETTINGS.autocompletion.defaultRegexStr
 );
 
-const calloutItems: OikkariSuggestItem[] = callouts.map((callout) => ({
-  title: capitalise(callout),
-  enabled: () => true,
-  onSelect: (context) => {
-    generateCalloutTemplate(callout, context);
-    return null;
-  },
-}));
+const calloutItems: OikkariSuggestItem<CalloutMeta>[] = callouts.map(
+  (callout) => ({
+    title: capitalise(callout.name),
+    icon: callout.icon,
+    meta: callout,
+    enabled: () => true,
+    onSelect: (context) => {
+      generateCalloutTemplate(callout.name, context);
+      return null;
+    },
+  })
+);
 
 function generateCalloutTemplate(
   type: string,
@@ -131,6 +146,37 @@ export function createCalloutProvider(): OikkariSuggestionProvider {
     return userRegex;
   }
 
+  function renderSuggestion(
+    suggestion: OikkariMatchedSuggestItem<CalloutMeta>,
+    container: HTMLLIElement
+  ) {
+    container.addClass("oikkari-suggestion-container");
+    const inner = container.createDiv({ cls: "oikkari-suggestion" });
+
+    const color = `rgba(var(--callout-${suggestion.meta?.color ?? suggestion.title.toLocaleLowerCase()}))`;
+    const backgroundColor = `rgba(var(--callout-${suggestion.meta?.color ?? suggestion.title.toLocaleLowerCase()}), 0.1)`;
+
+    inner.setCssStyles({ backgroundColor });
+    if (suggestion.icon) {
+      const iconWrapper = inner.createDiv({
+        cls: "oikkari-suggestion-icon",
+      });
+      iconWrapper.setCssStyles({
+        color,
+      });
+
+      setIcon(iconWrapper, `lucide-${suggestion.icon}`);
+    }
+
+    const titleElement = inner.createSpan();
+    titleElement.setCssStyles({ color, fontWeight: "900" });
+    renderMatches(
+      titleElement,
+      suggestion.title,
+      suggestion.fuzzyMatch.matches
+    );
+  }
+
   return {
     hasSettings: true,
     defaultSettings: DEFAULT_SETTINGS,
@@ -142,6 +188,7 @@ export function createCalloutProvider(): OikkariSuggestionProvider {
       title: "Insert Call out",
     },
     name: "callout-provider",
+    renderSuggestion,
     getSuggestions: (context) => fuzzySearchItems(calloutItems, context.query),
     onTrigger,
     tryAutocomplete: (cursor, line, userRegex) =>
