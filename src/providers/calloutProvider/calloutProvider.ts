@@ -128,6 +128,33 @@ function tryAutocomplete(
   };
 }
 
+function renderSuggestion(
+  suggestion: OikkariMatchedSuggestItem<CalloutMeta>,
+  container: HTMLLIElement
+) {
+  container.addClass("oikkari-suggestion-container");
+  const inner = container.createDiv({ cls: "oikkari-suggestion" });
+
+  const color = `rgba(var(--callout-${suggestion.meta?.color ?? suggestion.title.toLocaleLowerCase()}))`;
+  const backgroundColor = `rgba(var(--callout-${suggestion.meta?.color ?? suggestion.title.toLocaleLowerCase()}), 0.1)`;
+
+  inner.setCssStyles({ backgroundColor });
+  if (suggestion.icon) {
+    const iconWrapper = inner.createDiv({
+      cls: "oikkari-suggestion-icon",
+    });
+    iconWrapper.setCssStyles({
+      color,
+    });
+
+    setIcon(iconWrapper, `lucide-${suggestion.icon}`);
+  }
+
+  const titleElement = inner.createSpan();
+  titleElement.setCssStyles({ color, fontWeight: "900" });
+  renderMatches(titleElement, suggestion.title, suggestion.fuzzyMatch.matches);
+}
+
 export function createCalloutProvider(): OikkariSuggestionProvider {
   let userRegex: RegExp | null = null;
 
@@ -144,37 +171,6 @@ export function createCalloutProvider(): OikkariSuggestionProvider {
     }
 
     return userRegex;
-  }
-
-  function renderSuggestion(
-    suggestion: OikkariMatchedSuggestItem<CalloutMeta>,
-    container: HTMLLIElement
-  ) {
-    container.addClass("oikkari-suggestion-container");
-    const inner = container.createDiv({ cls: "oikkari-suggestion" });
-
-    const color = `rgba(var(--callout-${suggestion.meta?.color ?? suggestion.title.toLocaleLowerCase()}))`;
-    const backgroundColor = `rgba(var(--callout-${suggestion.meta?.color ?? suggestion.title.toLocaleLowerCase()}), 0.1)`;
-
-    inner.setCssStyles({ backgroundColor });
-    if (suggestion.icon) {
-      const iconWrapper = inner.createDiv({
-        cls: "oikkari-suggestion-icon",
-      });
-      iconWrapper.setCssStyles({
-        color,
-      });
-
-      setIcon(iconWrapper, `lucide-${suggestion.icon}`);
-    }
-
-    const titleElement = inner.createSpan();
-    titleElement.setCssStyles({ color, fontWeight: "900" });
-    renderMatches(
-      titleElement,
-      suggestion.title,
-      suggestion.fuzzyMatch.matches
-    );
   }
 
   return {
