@@ -20,7 +20,6 @@
     "globals": "latest",
     "jiti": "latest",
     "obsidian": "latest",
-    "obsidian-typings": "obsidian-public-latest",
     "tslib": "2.4.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "8.35.1"

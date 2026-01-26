@@ -1,0 +1,22 @@
+.oikkari-suggestion-container {
+	display: flex;
+	align-items: center;
+	border-left: 3px solid transparent;
+}
+
+.oikkari-suggestion-container .oikkari-suggestion {
+	display: flex;
+	flex: 1;
+	gap: 0.5rem;
+	align-items: center;
+	padding: 4px 8px 8px 8px;
+}
+
+.oikkari-suggestion-container .oikkari-suggestion-icon {
+	display: flex;
+}
+
+.suggestion-item.is-selected.oikkari-suggestion-container {
+	background-color: unset;
+ 	border-left: 3px solid var(--background-modifier-hover);
+}

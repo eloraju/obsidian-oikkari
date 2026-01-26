@@ -3,24 +3,63 @@ import {
   EditorSuggestContext,
   EditorSuggestTriggerInfo,
 } from "obsidian";
-import { OikkariSuggestItem } from "oikkariSuggest/suggestTypes";
+import {
+  OikkariMatchedSuggestItem,
+  OikkariSuggestItem,
+} from "oikkariSuggest/suggestTypes";
+
+type AutocompleteSettings = {
+  enabled: boolean;
+  userRegexStr?: string;
+  defaultRegexStr: string;
+};
 
 export type ProviderSettings = {
   enabled: boolean;
-  autocompleteEnabled: boolean;
-  autocompleteRegex: string;
+  autocompletion: AutocompleteSettings;
 };
 
-export type OikkariSuggestionProvider = {
-  saveKey: string;
-  description: string;
+export type ProviderSettingsMetadata = {
+  title: string;
+  description?: string;
+  tooltip?: string;
+};
+
+export type ProviderSuggestionMetadata = {
+  title: string;
+  description?: string;
+};
+
+type OikkariSuggestionProviderBase = {
   name: string;
-  defaultSettings: ProviderSettings;
-  getSuggestions: (context: EditorSuggestContext) => OikkariSuggestItem[];
-  renderSuggestions?: (suggestion: OikkariSuggestItem, el: HTMLElement) => void;
-  autocompleteTrigger?: (
+  suggestionMetadata: ProviderSuggestionMetadata;
+  getSuggestions: (
+    context: EditorSuggestContext
+  ) => OikkariMatchedSuggestItem[];
+  renderSuggestion?: (suggestion: OikkariSuggestItem, el: HTMLElement) => void;
+  onTrigger: (
+    cursor: EditorPosition,
+    line: string
+  ) => EditorSuggestTriggerInfo | null;
+  tryAutocomplete?: (
     cursor: EditorPosition,
     line: string,
     userSpecifiedRegex?: string
   ) => EditorSuggestTriggerInfo | null;
 };
+
+type NoSettings = { hasSettings: false };
+type WithSettings = {
+  hasSettings: true;
+  settingsMetadata: ProviderSettingsMetadata;
+  defaultSettings: ProviderSettings;
+};
+
+export type OikkariSuggestionProviderWithSettings =
+  OikkariSuggestionProviderBase & WithSettings;
+export type OikkariSuggestionProviderNoSettings =
+  OikkariSuggestionProviderBase & NoSettings;
+
+export type OikkariSuggestionProvider =
+  | OikkariSuggestionProviderWithSettings
+  | OikkariSuggestionProviderNoSettings;
